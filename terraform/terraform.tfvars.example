@@ -1,0 +1,36 @@
+# Proxmox
+proxmox_endpoint   = "https://10.0.0.2:8006/"
+proxmox_insecure   = true
+proxmox_api_token  = "terraform@pve!token=REDACTED" # or set PROXMOX_VE_API_TOKEN / use env vars
+
+# Cluster basics
+cluster_name       = "homelab"
+# A stable Kubernetes API endpoint (VIP or DNS). For a home lab, a VIP (kube-vip) is common.
+cluster_endpoint   = "https://192.168.1.250:6443"
+
+# 3 nodes (controlplane + worker)
+nodes = {
+  talos-1 = { node_name = "pve1", vm_id = 201, ip = "192.168.1.201", install_disk = "/dev/sda" }
+  talos-2 = { node_name = "pve2", vm_id = 202, ip = "192.168.1.202", install_disk = "/dev/sda" }
+  talos-3 = { node_name = "pve3", vm_id = 203, ip = "192.168.1.203", install_disk = "/dev/sda" }
+}
+
+# VM sizing
+vm_cores           = 2
+vm_memory_mb       = 4096
+vm_disk_gb         = 40
+vm_bridge          = "vmbr0"
+vm_vlan_id         = null # e.g. 1
+
+# Talos ISO
+# Option A: download ISO into Proxmox (recommended for IaC)
+talos_iso_url      = "https://example.com/talos-amd64.iso"
+iso_datastore_id   = "local"
+# Option B: point at an existing ISO in Proxmox storage
+talos_iso_file_id  = "local:iso/talos-amd64.iso" # set this if you don't download via Terraform
+
+# Argo CD + platform repo
+platform_repo_url      = "https://github.com/YOUR_GH_USER/talos-platform.git"
+platform_repo_revision = "main"
+platform_repo_path     = "clusters/homelab/bootstrap"
+argocd_chart_version   = null # e.g. "9.1.7" (chart versions vary)

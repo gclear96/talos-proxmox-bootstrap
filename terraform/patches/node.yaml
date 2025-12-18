@@ -1,0 +1,8 @@
+# Per-node Talos patch (YAML)
+machine:
+  network:
+    hostname: ${hostname}
+  install:
+    disk: ${install_disk}
+    wipe: false
+    image: factory.talos.dev/installer/default # TODO: set to an actual installer image for your Talos version
