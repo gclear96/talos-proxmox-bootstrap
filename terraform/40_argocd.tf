@@ -1,39 +1,70 @@
-# Install Argo CD via Helm chart, then apply the "root" application that points to the platform repo.
+# Install Argo CD via Helm chart, and inject the "root" application (and optional repo secret)
+# via chart `extraObjects`.
+#
+# Why: `kubernetes_manifest` requires a working Kubernetes REST client during `terraform plan`,
+# which isn't available until Talos bootstraps and emits client configuration.
 
-resource "kubernetes_namespace" "argocd" {
-  depends_on = [local_sensitive_file.kubeconfig]
-  metadata { name = "argocd" }
-}
+locals {
+  argocd_namespace = "argocd"
 
-resource "kubernetes_manifest" "platform_repo" {
-  count = var.platform_repo_username != null && var.platform_repo_password != null ? 1 : 0
-
-  depends_on = [kubernetes_namespace.argocd]
-
-  manifest = {
-    apiVersion = "v1"
-    kind       = "Secret"
-    metadata = {
-      name      = "platform-repo"
-      namespace = kubernetes_namespace.argocd.metadata[0].name
-      labels = {
-        "argocd.argoproj.io/secret-type" = "repository"
+  argocd_extra_objects = concat([
+    {
+      apiVersion = "argoproj.io/v1alpha1"
+      kind       = "Application"
+      metadata = {
+        name      = "platform-root"
+        namespace = local.argocd_namespace
       }
-    }
-    type = "Opaque"
-    stringData = {
-      url      = var.platform_repo_url
-      username = var.platform_repo_username
-      password = var.platform_repo_password
-    }
-  }
+      spec = {
+        project = "default"
+        source = {
+          repoURL        = var.platform_repo_url
+          targetRevision = var.platform_repo_revision
+          path           = var.platform_repo_path
+        }
+        destination = {
+          server    = "https://kubernetes.default.svc"
+          namespace = local.argocd_namespace
+        }
+        syncPolicy = {
+          automated = {
+            prune    = true
+            selfHeal = true
+          }
+          syncOptions = [
+            "CreateNamespace=true",
+          ]
+        }
+      }
+    },
+    ], var.platform_repo_username != null && var.platform_repo_password != null ? [
+    {
+      apiVersion = "v1"
+      kind       = "Secret"
+      metadata = {
+        name      = "platform-repo"
+        namespace = local.argocd_namespace
+        labels = {
+          "argocd.argoproj.io/secret-type" = "repository"
+        }
+      }
+      type = "Opaque"
+      stringData = {
+        url      = var.platform_repo_url
+        username = var.platform_repo_username
+        password = var.platform_repo_password
+      }
+    },
+  ] : [])
 }
 
 resource "helm_release" "argocd" {
   name       = "argo-cd"
-  namespace  = kubernetes_namespace.argocd.metadata[0].name
+  namespace  = local.argocd_namespace
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
+
+  create_namespace = true
 
   # Optional pin
   version = var.argocd_chart_version
@@ -52,42 +83,8 @@ resource "helm_release" "argocd" {
         "helm.oci.enabled" = "true"
       }
     }
+    extraObjects = local.argocd_extra_objects
   })]
 
-  depends_on = [local_sensitive_file.kubeconfig, kubernetes_namespace.argocd]
-}
-
-# Root app: points to the platform repo, which contains ApplicationSets / AppProjects etc.
-resource "kubernetes_manifest" "platform_root_app" {
-  manifest = {
-    apiVersion = "argoproj.io/v1alpha1"
-    kind       = "Application"
-    metadata = {
-      name      = "platform-root"
-      namespace = "argocd"
-    }
-    spec = {
-      project = "default"
-      source = {
-        repoURL        = var.platform_repo_url
-        targetRevision = var.platform_repo_revision
-        path           = var.platform_repo_path
-      }
-      destination = {
-        server    = "https://kubernetes.default.svc"
-        namespace = "argocd"
-      }
-      syncPolicy = {
-        automated = {
-          prune    = true
-          selfHeal = true
-        }
-        syncOptions = [
-          "CreateNamespace=true"
-        ]
-      }
-    }
-  }
-
-  depends_on = [helm_release.argocd, kubernetes_manifest.platform_repo]
+  depends_on = [talos_cluster_kubeconfig.this]
 }

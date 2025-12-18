@@ -6,6 +6,9 @@
 **/*.tfvars
 **/*.tfvars.json
 
+# Tooling caches
+.helm/
+
 # Local outputs (kubeconfig, talosconfig)
 out/*
 !out/.gitkeep
