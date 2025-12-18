@@ -14,17 +14,35 @@ resource "proxmox_virtual_environment_vm" "talos" {
   description = "Talos node managed by Terraform"
   tags        = ["terraform", "talos", "k8s"]
 
+  # Talos-on-Proxmox recommended settings:
+  # - UEFI/OVMF + q35 machine type (modern firmware + hardware model)
+  # - CPU type host (avoid odd emulated CPU features)
+  bios    = "ovmf"
+  machine = "q35"
+
   cpu {
     cores = var.vm_cores
+    type  = "host"
   }
 
   memory {
     dedicated = var.vm_memory_mb
+    # Explicitly disable ballooning/hotplug (Talos guidance).
+    floating = 0
+  }
+
+  # Ensure the controller is VirtIO SCSI (NOT virtio-scsi-single).
+  scsi_hardware = "virtio-scsi-pci"
+
+  # Required for OVMF boot.
+  efi_disk {
+    datastore_id = coalesce(var.vm_efi_datastore_id, var.vm_datastore_id)
+    file_format  = "raw"
   }
 
   # Primary disk (Talos install target)
   disk {
-    datastore_id = "local-lvm"
+    datastore_id = var.vm_datastore_id
     interface    = "scsi0"
     size         = var.vm_disk_gb
     file_format  = "raw"
@@ -36,10 +54,22 @@ resource "proxmox_virtual_environment_vm" "talos" {
   network_device {
     bridge  = var.vm_bridge
     vlan_id = var.vm_vlan_id
+    model   = "virtio"
   }
 
-  # TODO: Attach the Talos ISO as a CD-ROM device, using local.talos_iso_file_id_effective.
-  # Depending on provider version, this may be a `cdrom { ... }` block or a disk with `interface = "ide2"`.
+  # Attach the Talos ISO as a CD-ROM for first boot (Talos maintenance mode),
+  # then Talos installs itself onto scsi0 via machine.install.* in the applied config.
+  cdrom {
+    enabled = true
+    file_id = (
+      var.talos_iso_file_id != null
+      ? var.talos_iso_file_id
+      : local.talos_iso_file_id_by_node[each.value.node_name]
+    )
+  }
+
+  # Boot from ISO first (ide2), then boot the installed OS disk (scsi0).
+  boot_order = ["ide2", "scsi0", "net0"]
 
   lifecycle {
     ignore_changes = []

@@ -29,6 +29,29 @@ Outputs include:
 - `kubeconfig_path` (written locally)
 - `talosconfig_path` (written locally)
 
+## Proxmox VM defaults (Talos-friendly)
+
+The VM resource is configured for Talos-on-Proxmox guidance:
+- UEFI/OVMF + `q35`
+- CPU type `host`
+- VirtIO NIC model
+- VirtIO SCSI controller (`virtio-scsi-pci`, not `virtio-scsi-single`)
+- memory ballooning disabled (`floating = 0`)
+
+## Talos ISO handling
+
+You must provide *either*:
+- `talos_iso_url` (Terraform downloads the ISO into Proxmox), or
+- `talos_iso_file_id` (reference an ISO you already uploaded to Proxmox, e.g. `local:iso/talos.iso`)
+
+If `iso_datastore_id` is not shared across Proxmox nodes, the ISO will be downloaded once per unique `node_name`
+in `var.nodes`.
+
+## Talos install + VIP
+
+- `talos_installer_image` is required (example: `ghcr.io/siderolabs/installer:v1.8.0`).
+- For a stable API endpoint, set `cluster_vip_ip` (and keep `cluster_endpoint` pointing at the same IP).
+
 ## Root app / cutover to Forgejo
 
 1) Start with GitHub as `platform_repo_url`.

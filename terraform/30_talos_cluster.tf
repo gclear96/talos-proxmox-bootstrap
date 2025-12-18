@@ -2,11 +2,8 @@ locals {
   out_dir          = "${path.module}/../out"
   kubeconfig_path  = "${local.out_dir}/${var.cluster_name}.kubeconfig"
   talosconfig_path = "${local.out_dir}/${var.cluster_name}.talosconfig"
-}
-
-resource "local_file" "out_dir_marker" {
-  filename = "${local.out_dir}/.keep"
-  content  = "generated"
+  bootstrap_node   = sort(keys(var.nodes))[0]
+  bootstrap_ip     = var.nodes[local.bootstrap_node].ip
 }
 
 # Generate secrets (PKI etc) for the cluster
@@ -24,17 +21,25 @@ data "talos_machine_configuration" "controlplane" {
 resource "talos_machine_configuration_apply" "cp" {
   for_each = var.nodes
 
-  client_configuration         = talos_machine_secrets.this.client_configuration
-  machine_configuration_input  = data.talos_machine_configuration.controlplane.machine_configuration
-  node                         = each.value.ip
-  endpoint                     = each.value.ip
+  depends_on = [proxmox_virtual_environment_vm.talos]
 
-  config_patches = [
+  client_configuration        = talos_machine_secrets.this.client_configuration
+  machine_configuration_input = data.talos_machine_configuration.controlplane.machine_configuration
+  node                        = each.value.ip
+  endpoint                    = each.value.ip
+
+  config_patches = compact([
     templatefile("${path.module}/patches/node.yaml", {
-      hostname     = each.key
-      install_disk = each.value.install_disk
-    })
-  ]
+      hostname                           = each.key
+      install_disk                       = each.value.install_disk
+      installer_image                    = var.talos_installer_image
+      allow_scheduling_on_control_planes = var.allow_scheduling_on_control_planes
+    }),
+    var.cluster_vip_ip != null ? templatefile("${path.module}/patches/vip.yaml", {
+      vip_interface = var.cluster_vip_interface
+      vip_ip        = var.cluster_vip_ip
+    }) : null,
+  ])
 }
 
 # Bootstrap etcd on one node
@@ -42,15 +47,15 @@ resource "talos_machine_bootstrap" "bootstrap" {
   depends_on = [talos_machine_configuration_apply.cp]
 
   client_configuration = talos_machine_secrets.this.client_configuration
-  node                 = values(var.nodes)[0].ip
+  node                 = local.bootstrap_ip
 }
 
 # Fetch kubeconfig + talosconfig for local use
-data "talos_cluster_kubeconfig" "this" {
+resource "talos_cluster_kubeconfig" "this" {
   depends_on = [talos_machine_bootstrap.bootstrap]
 
   client_configuration = talos_machine_secrets.this.client_configuration
-  node                 = values(var.nodes)[0].ip
+  node                 = local.bootstrap_ip
 }
 
 data "talos_client_configuration" "this" {
@@ -59,12 +64,14 @@ data "talos_client_configuration" "this" {
   endpoints            = [for n in var.nodes : n.ip]
 }
 
-resource "local_file" "kubeconfig" {
-  filename = local.kubeconfig_path
-  content  = data.talos_cluster_kubeconfig.this.kubeconfig_raw
+resource "local_sensitive_file" "kubeconfig" {
+  filename        = local.kubeconfig_path
+  content         = talos_cluster_kubeconfig.this.kubeconfig_raw
+  file_permission = "0600"
 }
 
-resource "local_file" "talosconfig" {
-  filename = local.talosconfig_path
-  content  = data.talos_client_configuration.this.talos_config
+resource "local_sensitive_file" "talosconfig" {
+  filename        = local.talosconfig_path
+  content         = data.talos_client_configuration.this.talos_config
+  file_permission = "0600"
 }

@@ -5,4 +5,7 @@ machine:
   install:
     disk: ${install_disk}
     wipe: false
-    image: factory.talos.dev/installer/default # TODO: set to an actual installer image for your Talos version
+    image: ${installer_image}
+
+cluster:
+  allowSchedulingOnControlPlanes: ${allow_scheduling_on_control_planes}

@@ -3,25 +3,26 @@ terraform {
 
   required_providers {
     proxmox = {
-      source  = "bpg/proxmox"
-      version = ">= 0.80.0"
+      source = "bpg/proxmox"
+      # Pinned to a narrow range to reduce churn in a Proxmox-lifecycle project.
+      version = "~> 0.80.0"
     }
     talos = {
-      source  = "siderolabs/talos"
-      # provider was beta at the time of writing; adjust as needed
-      version = ">= 0.10.0-beta.0"
+      source = "siderolabs/talos"
+      # Pinned to the Talos provider minor series in use (also locked in terraform.lock.hcl).
+      version = "~> 0.9.0"
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = ">= 2.20.0"
+      version = "~> 2.20"
     }
     helm = {
       source  = "hashicorp/helm"
-      version = ">= 2.10.0"
+      version = "~> 2.10"
     }
     local = {
       source  = "hashicorp/local"
-      version = ">= 2.4.0"
+      version = "~> 2.4"
     }
   }
 }

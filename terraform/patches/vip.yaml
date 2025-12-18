@@ -1,0 +1,9 @@
+# Optional Talos patch: configure a VIP for the Kubernetes API endpoint.
+#
+# Talos will manage kube-vip when a VIP is configured here.
+machine:
+  network:
+    interfaces:
+      - interface: ${vip_interface}
+        vip:
+          ip: ${vip_ip}

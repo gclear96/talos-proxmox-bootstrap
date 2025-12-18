@@ -1,20 +1,27 @@
-# Option A: download Talos ISO into Proxmox storage (IaC-friendly)
-# Note: if you have shared storage across nodes, download once. If not, you'll need one per node.
-resource "proxmox_virtual_environment_download_file" "talos_iso" {
-  count = var.talos_iso_url != null ? 1 : 0
+# Option A: download Talos ISO into Proxmox storage (IaC-friendly).
+#
+# IMPORTANT:
+# - If iso_datastore_id is not shared across Proxmox nodes, we download the ISO once per unique node_name.
+# - If you have shared storage, you can still set talos_iso_file_id to a single shared file ID.
 
-  node_name    = values(var.nodes)[0].node_name
+locals {
+  proxmox_node_names = toset([for n in var.nodes : n.node_name])
+}
+
+resource "proxmox_virtual_environment_download_file" "talos_iso" {
+  for_each = var.talos_iso_url != null ? local.proxmox_node_names : toset([])
+
+  node_name    = each.value
   datastore_id = var.iso_datastore_id
   content_type = "iso"
 
   url       = var.talos_iso_url
-  file_name = "talos.iso"
+  file_name = var.talos_iso_file_name
 }
 
 locals {
-  talos_iso_file_id_effective = (
-    var.talos_iso_file_id != null
-    ? var.talos_iso_file_id
-    : (try(proxmox_virtual_environment_download_file.talos_iso[0].id, null))
-  )
+  talos_iso_file_id_by_node = {
+    for node_name in local.proxmox_node_names :
+    node_name => try(proxmox_virtual_environment_download_file.talos_iso[node_name].id, null)
+  }
 }

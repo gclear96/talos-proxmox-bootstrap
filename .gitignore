@@ -1,6 +1,5 @@
 # Terraform
 **/.terraform/
-**/.terraform.lock.hcl
 **/terraform.tfstate
 **/terraform.tfstate.backup
 **/terraform.tfstate.d/
@@ -8,7 +7,8 @@
 **/*.tfvars.json
 
 # Local outputs (kubeconfig, talosconfig)
-out/
+out/*
+!out/.gitkeep
 *.kubeconfig
 *.talosconfig
 
