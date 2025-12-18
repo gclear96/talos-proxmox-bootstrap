@@ -1,14 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Placeholder helper: you will still need to create the repo/org in Forgejo and push/mirror.
+# Helper: mirror the platform repo and print the Terraform vars you need to update.
 #
-# Suggested approach:
-# 1) In your platform repo locally:
-#    git remote add forgejo https://<forgejo>/YOURORG/talos-platform.git
-#    git push --mirror forgejo
+# Usage:
+#   ./scripts/cutover_to_forgejo.sh <gh_url> <forgejo_url>
 #
-# 2) Update the bootstrap repo's platform_repo_url to the Forgejo URL and re-run:
-#    terraform apply
+# Example:
+#   ./scripts/cutover_to_forgejo.sh \
+#     https://github.com/YOUR_GH_USER/talos-platform.git \
+#     https://forgejo.example.com/YOURORG/talos-platform.git
 
-echo "See comments in this script for the recommended cutover steps."
+GH_URL=${1:?github url}
+FORGEJO_URL=${2:?forgejo url}
+
+cat <<EOF
+1) In the platform repo:
+   ./hack/set-repourl.sh ${GH_URL} ${FORGEJO_URL}
+   git commit -am "chore: repourl cutover to forgejo"
+   git push
+   git push --mirror <forgejo-remote>
+
+2) In this repo (bootstrap), update:
+   platform_repo_url = "${FORGEJO_URL}"
+   # if private, also set platform_repo_username/platform_repo_password (prefer TF_VAR_platform_repo_password)
+
+3) Re-apply:
+   cd terraform && terraform apply
+EOF

@@ -29,6 +29,22 @@ Outputs include:
 - `kubeconfig_path` (written locally)
 - `talosconfig_path` (written locally)
 
+## Smoke tests
+
+```bash
+KUBECONFIG=../out/homelab.kubeconfig kubectl get nodes -o wide
+KUBECONFIG=../out/homelab.kubeconfig kubectl get pods -A
+KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd get pods
+KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd get applications,applicationsets,appprojects
+```
+
+To access Argo CD UI quickly:
+
+```bash
+KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd port-forward svc/argo-cd-argocd-server 8080:443
+KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd get secret argo-cd-argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
+```
+
 ## Proxmox VM defaults (Talos-friendly)
 
 The VM resource is configured for Talos-on-Proxmox guidance:
@@ -66,3 +82,5 @@ See `scripts/` for helper commands (placeholders).
 
 If your platform repo is private (common after cutover to in-cluster Forgejo), set `platform_repo_username` and
 `platform_repo_password` (prefer `TF_VAR_platform_repo_password` env var) so Argo CD can fetch it.
+
+See `CUTOVER.md` for the end-to-end procedure.
