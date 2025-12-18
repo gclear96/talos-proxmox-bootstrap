@@ -11,6 +11,7 @@ This repo is intended to be run locally. It provisions 3 Talos Linux VMs on Prox
 - Terraform (or OpenTofu) 1.5+
 - Proxmox VE API endpoint + token with VM/storage permissions
 - A Talos ISO URL you can download into Proxmox *or* a Talos ISO already present on Proxmox storage
+- A Talos installer image tag for `talos_installer_image` (example: `ghcr.io/siderolabs/installer:v1.8.0`)
 - `talosctl` and `kubectl` are helpful for debugging (not required for the Terraform plan itself)
 
 ## Quick start
@@ -78,7 +79,7 @@ in `var.nodes`.
 terraform apply
 ```
 
-See `scripts/` for helper commands (placeholders).
+See `scripts/` for helper commands.
 
 If your platform repo is private (common after cutover to in-cluster Forgejo), set `platform_repo_username` and
 `platform_repo_password` (prefer `TF_VAR_platform_repo_password` env var) so Argo CD can fetch it.
