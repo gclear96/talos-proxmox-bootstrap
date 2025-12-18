@@ -63,3 +63,6 @@ terraform apply
 ```
 
 See `scripts/` for helper commands (placeholders).
+
+If your platform repo is private (common after cutover to in-cluster Forgejo), set `platform_repo_username` and
+`platform_repo_password` (prefer `TF_VAR_platform_repo_password` env var) so Argo CD can fetch it.

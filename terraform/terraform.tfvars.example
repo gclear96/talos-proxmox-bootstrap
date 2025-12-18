@@ -40,6 +40,8 @@ allow_scheduling_on_control_planes = true
 
 # Argo CD + platform repo
 platform_repo_url      = "https://github.com/YOUR_GH_USER/talos-platform.git"
+platform_repo_username = null # optional (needed for private Forgejo over HTTPS)
+platform_repo_password = null # optional (token/password); prefer env vars + TF_VAR_platform_repo_password
 platform_repo_revision = "main"
 platform_repo_path     = "clusters/homelab/bootstrap"
 argocd_chart_version   = null # e.g. "9.1.7" (chart versions vary)

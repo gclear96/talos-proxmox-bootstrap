@@ -122,6 +122,20 @@ variable "platform_repo_url" {
   type = string
 }
 
+variable "platform_repo_username" {
+  description = "Optional repo auth for Argo CD (e.g. Forgejo username for HTTPS auth)."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
+variable "platform_repo_password" {
+  description = "Optional repo auth for Argo CD (e.g. Forgejo token/password for HTTPS auth)."
+  type        = string
+  sensitive   = true
+  default     = null
+}
+
 variable "platform_repo_revision" {
   type    = string
   default = "main"
