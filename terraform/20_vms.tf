@@ -60,7 +60,6 @@ resource "proxmox_virtual_environment_vm" "talos" {
   # Attach the Talos ISO as a CD-ROM for first boot (Talos maintenance mode),
   # then Talos installs itself onto scsi0 via machine.install.* in the applied config.
   cdrom {
-    enabled   = true
     interface = "ide2"
     file_id = (
       var.talos_iso_file_id != null

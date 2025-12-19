@@ -13,6 +13,7 @@ This repo is intended to be run locally. It provisions 3 Talos Linux VMs on Prox
 - A Talos ISO URL you can download into Proxmox *or* a Talos ISO already present on Proxmox storage
 - A Talos installer image tag for `talos_installer_image` (example: `ghcr.io/siderolabs/installer:v1.8.0`)
 - `talosctl` and `kubectl` are helpful for debugging (not required for the Terraform plan itself)
+- Each Proxmox node must have hardware virtualization enabled (Intel VT-x / AMD-V). If one node lacks it, VMs on that node will fail to start with “KVM virtualization configured, but not available”.
 
 ## Quick start
 
@@ -85,3 +86,18 @@ If your platform repo is private (common after cutover to in-cluster Forgejo), s
 `platform_repo_password` (prefer `TF_VAR_platform_repo_password` env var) so Argo CD can fetch it.
 
 See `CUTOVER.md` for the end-to-end procedure.
+
+## Troubleshooting: “KVM virtualization configured, but not available”
+
+If a VM fails to start on a specific Proxmox node with:
+
+> KVM virtualisation configured, but not available. Either disable in VM configuration or enable in BIOS.
+
+Fix it on that Proxmox node (example checks):
+
+```bash
+egrep -c '(vmx|svm)' /proc/cpuinfo
+lsmod | grep -E '^kvm|kvm_intel|kvm_amd' || true
+```
+
+If `/proc/cpuinfo` has no `vmx` (Intel) or `svm` (AMD) flags, enable virtualization in that machine’s BIOS/UEFI and reboot the node.

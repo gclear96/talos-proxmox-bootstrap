@@ -5,6 +5,8 @@
 **/terraform.tfstate.d/
 **/*.tfvars
 **/*.tfvars.json
+**/*.tfplan
+**/planfile
 
 # Tooling caches
 .helm/
