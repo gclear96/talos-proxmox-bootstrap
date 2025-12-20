@@ -34,13 +34,54 @@ variable "cluster_vip_interface" {
 }
 
 variable "nodes" {
-  description = "Map of node name -> { node_name, vm_id, ip, install_disk }"
+  description = "Map of node name -> { node_name, vm_id, ip, install_disk, mac_address? }"
   type = map(object({
     node_name    = string
     vm_id        = number
     ip           = string
     install_disk = string
+    mac_address  = optional(string)
   }))
+}
+
+variable "node_network_mode" {
+  description = "How Talos should configure node networking for the primary interface: dhcp or static."
+  type        = string
+  default     = "dhcp"
+
+  validation {
+    condition     = contains(["dhcp", "static"], var.node_network_mode)
+    error_message = "node_network_mode must be one of: dhcp, static."
+  }
+}
+
+variable "node_network_prefix" {
+  description = "CIDR prefix length for node IPs when node_network_mode=static (e.g. 24)."
+  type        = number
+  default     = 24
+
+  validation {
+    condition     = var.node_network_prefix >= 1 && var.node_network_prefix <= 32
+    error_message = "node_network_prefix must be between 1 and 32."
+  }
+}
+
+variable "node_network_gateway" {
+  description = "Default gateway for node IPs when node_network_mode=static (e.g. 192.168.50.1)."
+  type        = string
+  default     = null
+}
+
+variable "node_network_nameservers" {
+  description = "DNS servers for nodes when node_network_mode=static (e.g. [\"192.168.50.1\"])."
+  type        = list(string)
+  default     = []
+}
+
+variable "node_network_mtu" {
+  description = "Optional MTU to set on the primary interface (leave null to use default)."
+  type        = number
+  default     = null
 }
 
 variable "vm_cores" {

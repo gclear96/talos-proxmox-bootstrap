@@ -70,6 +70,20 @@ in `var.nodes`.
 - `talos_installer_image` is required (example: `ghcr.io/siderolabs/installer:v1.8.0`).
 - For a stable API endpoint, set `cluster_vip_ip` (and keep `cluster_endpoint` pointing at the same IP).
 
+## Stable node IPs (recommended)
+
+Proxmox does not “set an IP” inside the VM. Talos will bring up networking and typically use DHCP by default.
+
+Recommended approach (stable from first boot, works great with Terraform):
+
+1) Set a fixed `mac_address` per node in `nodes`.
+2) Configure your DHCP server/router to reserve the desired `nodes[*].ip` for each MAC.
+
+Optional alternative (Talos static config):
+
+- Set `node_network_mode = "static"` and configure `node_network_prefix`, `node_network_gateway`, and `node_network_nameservers`.
+- Note: Terraform still needs initial reachability to the Talos API to apply config, so DHCP reservations are still the smoothest “day 1” path.
+
 ## Root app / cutover to Forgejo
 
 1) Start with GitHub as `platform_repo_url`.

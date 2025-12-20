@@ -12,10 +12,20 @@ cluster_vip_interface = "eth0"
 
 # 3 nodes (controlplane + worker)
 nodes = {
-  talos-1 = { node_name = "pve1", vm_id = 201, ip = "192.168.1.201", install_disk = "/dev/sda" }
-  talos-2 = { node_name = "pve2", vm_id = 202, ip = "192.168.1.202", install_disk = "/dev/sda" }
-  talos-3 = { node_name = "pve3", vm_id = 203, ip = "192.168.1.203", install_disk = "/dev/sda" }
+  talos-1 = { node_name = "pve1", vm_id = 201, ip = "192.168.1.201", install_disk = "/dev/sda", mac_address = "BC:24:11:00:00:01" }
+  talos-2 = { node_name = "pve2", vm_id = 202, ip = "192.168.1.202", install_disk = "/dev/sda", mac_address = "BC:24:11:00:00:02" }
+  talos-3 = { node_name = "pve3", vm_id = 203, ip = "192.168.1.203", install_disk = "/dev/sda", mac_address = "BC:24:11:00:00:03" }
 }
+
+# Node network configuration
+# Recommended: use fixed MACs + DHCP reservations so Talos gets the intended IP from first boot.
+#
+# Optional: configure Talos to use static addressing after config apply:
+node_network_mode        = "dhcp" # or "static"
+node_network_prefix      = 24
+node_network_gateway     = "192.168.1.1"     # required when node_network_mode="static"
+node_network_nameservers = ["192.168.1.1"]   # required when node_network_mode="static"
+node_network_mtu         = null
 
 # VM sizing
 vm_cores           = 2

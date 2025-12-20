@@ -1,0 +1,31 @@
+# Talos network patch (YAML)
+#
+# Notes:
+# - "Static IP at VM creation time" is best achieved via DHCP reservations keyed off a fixed MAC address.
+# - Talos can also be configured with static addressing here, but you still need initial reachability
+#   to apply the config (or ensure DHCP hands out the desired IPs first).
+machine:
+  network:
+    interfaces:
+      - interface: ${interface}
+        dhcp: ${dhcp}
+%{ if mtu != null ~}
+        mtu: ${mtu}
+%{ endif ~}
+%{ if dhcp == false ~}
+        addresses:
+          - ${ip}/${prefix}
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${gateway}
+%{ endif ~}
+%{ if vip_ip != null ~}
+        vip:
+          ip: ${vip_ip}
+%{ endif ~}
+%{ if length(nameservers) > 0 ~}
+    nameservers:
+%{ for ns in nameservers ~}
+      - ${ns}
+%{ endfor ~}
+%{ endif ~}

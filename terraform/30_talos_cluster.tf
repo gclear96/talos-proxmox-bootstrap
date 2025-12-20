@@ -35,11 +35,24 @@ resource "talos_machine_configuration_apply" "cp" {
       installer_image                    = var.talos_installer_image
       allow_scheduling_on_control_planes = var.allow_scheduling_on_control_planes
     }),
-    var.cluster_vip_ip != null ? templatefile("${path.module}/patches/vip.yaml", {
-      vip_interface = var.cluster_vip_interface
-      vip_ip        = var.cluster_vip_ip
+    (var.node_network_mode == "static" || var.cluster_vip_ip != null) ? templatefile("${path.module}/patches/network.yaml", {
+      interface   = var.cluster_vip_interface
+      dhcp        = var.node_network_mode == "dhcp"
+      ip          = each.value.ip
+      prefix      = var.node_network_prefix
+      gateway     = var.node_network_gateway
+      nameservers = var.node_network_nameservers
+      vip_ip      = var.cluster_vip_ip
+      mtu         = var.node_network_mtu
     }) : null,
   ])
+
+  lifecycle {
+    precondition {
+      condition     = var.node_network_mode != "static" || (var.node_network_gateway != null && length(var.node_network_nameservers) > 0)
+      error_message = "When node_network_mode=static you must set node_network_gateway and at least one node_network_nameservers entry."
+    }
+  }
 }
 
 # Bootstrap etcd on one node

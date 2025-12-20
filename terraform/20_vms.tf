@@ -52,9 +52,10 @@ resource "proxmox_virtual_environment_vm" "talos" {
 
   # Network
   network_device {
-    bridge  = var.vm_bridge
-    vlan_id = var.vm_vlan_id
-    model   = "virtio"
+    bridge      = var.vm_bridge
+    vlan_id     = var.vm_vlan_id
+    model       = "virtio"
+    mac_address = try(each.value.mac_address, null)
   }
 
   # Attach the Talos ISO as a CD-ROM for first boot (Talos maintenance mode),
