@@ -1,0 +1,8 @@
+platform:
+  repoURL: ""
+  revision: "main"
+  path: "clusters/homelab/bootstrap"
+  repoAuth:
+    enabled: false
+    username: ""
+    password: ""

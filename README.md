@@ -101,6 +101,11 @@ If your platform repo is private (common after cutover to in-cluster Forgejo), s
 
 See `CUTOVER.md` for the end-to-end procedure.
 
+## Note: Argo CD root app installation
+
+Argo CD is installed via the `argo/argo-cd` chart. The root `Application` is applied via a **second** Helm release
+(`platform-root`) so Argo CD CRDs are present before we attempt to create `argoproj.io/v1alpha1` resources.
+
 ## Troubleshooting: “KVM virtualization configured, but not available”
 
 If a VM fails to start on a specific Proxmox node with:

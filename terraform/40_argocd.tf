@@ -1,61 +1,13 @@
 # Install Argo CD via Helm chart, and inject the "root" application (and optional repo secret)
-# via chart `extraObjects`.
+# via a second Helm release after CRDs are installed.
 #
-# Why: `kubernetes_manifest` requires a working Kubernetes REST client during `terraform plan`,
-# which isn't available until Talos bootstraps and emits client configuration.
+# Why:
+# - `kubernetes_manifest` requires a working Kubernetes REST client during `terraform plan`.
+# - Helm (provider) validates objects against the live API before CRDs from the same release exist.
+#   So we install Argo CD (and its CRDs) first, then apply the root Application in a separate release.
 
 locals {
   argocd_namespace = "argocd"
-
-  argocd_extra_objects = concat([
-    {
-      apiVersion = "argoproj.io/v1alpha1"
-      kind       = "Application"
-      metadata = {
-        name      = "platform-root"
-        namespace = local.argocd_namespace
-      }
-      spec = {
-        project = "default"
-        source = {
-          repoURL        = var.platform_repo_url
-          targetRevision = var.platform_repo_revision
-          path           = var.platform_repo_path
-        }
-        destination = {
-          server    = "https://kubernetes.default.svc"
-          namespace = local.argocd_namespace
-        }
-        syncPolicy = {
-          automated = {
-            prune    = true
-            selfHeal = true
-          }
-          syncOptions = [
-            "CreateNamespace=true",
-          ]
-        }
-      }
-    },
-    ], var.platform_repo_username != null && var.platform_repo_password != null ? [
-    {
-      apiVersion = "v1"
-      kind       = "Secret"
-      metadata = {
-        name      = "platform-repo"
-        namespace = local.argocd_namespace
-        labels = {
-          "argocd.argoproj.io/secret-type" = "repository"
-        }
-      }
-      type = "Opaque"
-      stringData = {
-        url      = var.platform_repo_url
-        username = var.platform_repo_username
-        password = var.platform_repo_password
-      }
-    },
-  ] : [])
 }
 
 resource "helm_release" "argocd" {
@@ -83,8 +35,35 @@ resource "helm_release" "argocd" {
         "helm.oci.enabled" = "true"
       }
     }
-    extraObjects = local.argocd_extra_objects
   })]
 
   depends_on = [talos_cluster_kubeconfig.this]
+}
+
+resource "helm_release" "platform_root" {
+  name      = "platform-root"
+  namespace = local.argocd_namespace
+
+  chart = "${path.module}/charts/platform-root"
+
+  create_namespace = true
+
+  wait    = false
+  atomic  = false
+  timeout = 300
+
+  values = [yamlencode({
+    platform = {
+      repoURL  = var.platform_repo_url
+      revision = var.platform_repo_revision
+      path     = var.platform_repo_path
+      repoAuth = {
+        enabled  = var.platform_repo_username != null && var.platform_repo_password != null
+        username = var.platform_repo_username
+        password = var.platform_repo_password
+      }
+    }
+  })]
+
+  depends_on = [helm_release.argocd]
 }
