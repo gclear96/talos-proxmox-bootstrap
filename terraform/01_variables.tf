@@ -187,6 +187,18 @@ variable "platform_repo_path" {
   default = "clusters/homelab/bootstrap"
 }
 
+variable "kube_apiserver_wait_timeout_seconds" {
+  description = "How long to wait for the Kubernetes API server to become ready before installing Argo CD."
+  type        = number
+  default     = 300
+}
+
+variable "kube_apiserver_wait_interval_seconds" {
+  description = "Polling interval in seconds for Kubernetes API readiness."
+  type        = number
+  default     = 5
+}
+
 variable "argocd_chart_version" {
   type    = string
   default = null

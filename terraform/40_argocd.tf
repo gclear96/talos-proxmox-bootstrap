@@ -37,7 +37,7 @@ resource "helm_release" "argocd" {
     }
   })]
 
-  depends_on = [talos_cluster_kubeconfig.this]
+  depends_on = [terraform_data.wait_for_kube]
 }
 
 resource "helm_release" "platform_root" {

@@ -4,13 +4,7 @@ machine:
     modules:
       - name: nbd
       - name: iscsi_tcp
-      - name: iscsi_generic
       - name: configfs
-  customization:
-    systemExtensions:
-      officialExtensions:
-        - siderolabs/iscsi-tools
-        - siderolabs/util-linux-tools
   network:
     hostname: ${hostname}
   install:

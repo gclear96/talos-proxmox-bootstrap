@@ -56,3 +56,7 @@ platform_repo_password = null # optional (token/password); prefer env vars + TF_
 platform_repo_revision = "main"
 platform_repo_path     = "clusters/homelab/bootstrap"
 argocd_chart_version   = null # e.g. "9.1.7" (chart versions vary)
+
+# Wait for kube-apiserver before installing Argo CD (avoid race on first bootstrap)
+kube_apiserver_wait_timeout_seconds  = 300
+kube_apiserver_wait_interval_seconds = 5

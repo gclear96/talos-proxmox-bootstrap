@@ -31,6 +31,14 @@ Outputs include:
 - `kubeconfig_path` (written locally)
 - `talosconfig_path` (written locally)
 
+## First-bootstrap timing (Argo CD)
+
+Right after Talos bootstraps, the Kubernetes API can take a short while to become reachable.
+To avoid Helm/Argo CD racing the API, Terraform waits for `/readyz` before installing Argo CD.
+
+- Adjust `kube_apiserver_wait_timeout_seconds` and `kube_apiserver_wait_interval_seconds` in `terraform.tfvars` if needed.
+- This check uses `kubectl` locally, so ensure it is installed on the machine running Terraform.
+
 ## Smoke tests
 
 ```bash
@@ -75,12 +83,9 @@ in `var.nodes`.
 Longhorn requires iSCSI tooling plus specific kernel modules on the nodes that will run Longhorn.
 
 - Kernel modules are enabled in `terraform/patches/node.yaml`:
-  - `nbd`, `iscsi_tcp`, `iscsi_generic`, `configfs`
-- System extensions are enabled in `terraform/patches/node.yaml`:
-  - `siderolabs/iscsi-tools`, `siderolabs/util-linux-tools`
-
-If your nodes do not have outbound access to fetch extensions, build a custom Talos installer
-image via Image Factory that includes those extensions, and set `talos_installer_image` to it.
+  - `nbd`, `iscsi_tcp`, `configfs`
+- System extensions must be baked into your Talos installer image. Build a custom Image Factory
+  installer that includes `iscsi-tools` and `util-linux-tools`, and set `talos_installer_image` to it.
 
 If you skip the extensions, Longhorn will fail to attach volumes.
 
