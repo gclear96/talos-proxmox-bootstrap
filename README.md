@@ -70,6 +70,20 @@ in `var.nodes`.
 - `talos_installer_image` is required (example: `ghcr.io/siderolabs/installer:v1.8.0`).
 - For a stable API endpoint, set `cluster_vip_ip` (and keep `cluster_endpoint` pointing at the same IP).
 
+## Longhorn prerequisites (Talos)
+
+Longhorn requires iSCSI tooling plus specific kernel modules on the nodes that will run Longhorn.
+
+- Kernel modules are enabled in `terraform/patches/node.yaml`:
+  - `nbd`, `iscsi_tcp`, `iscsi_generic`, `configfs`
+- System extensions are enabled in `terraform/patches/node.yaml`:
+  - `siderolabs/iscsi-tools`, `siderolabs/util-linux-tools`
+
+If your nodes do not have outbound access to fetch extensions, build a custom Talos installer
+image via Image Factory that includes those extensions, and set `talos_installer_image` to it.
+
+If you skip the extensions, Longhorn will fail to attach volumes.
+
 ## Stable node IPs (recommended)
 
 Proxmox does not “set an IP” inside the VM. Talos will bring up networking and typically use DHCP by default.

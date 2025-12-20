@@ -45,6 +45,7 @@ iso_datastore_id   = "local"
 talos_iso_file_id  = "local:iso/talos-amd64.iso" # set this if you don't download via Terraform
 
 # Talos install image (required)
+# For Longhorn, build a custom installer image with system extensions (iscsi-tools, util-linux-tools).
 talos_installer_image = "ghcr.io/siderolabs/installer:v1.8.0"
 allow_scheduling_on_control_planes = true
 
