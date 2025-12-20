@@ -101,3 +101,23 @@ lsmod | grep -E '^kvm|kvm_intel|kvm_amd' || true
 ```
 
 If `/proc/cpuinfo` has no `vmx` (Intel) or `svm` (AMD) flags, enable virtualization in that machine’s BIOS/UEFI and reboot the node.
+
+## Troubleshooting: `talos_machine_configuration_apply` “Still creating…”
+
+`talos_machine_configuration_apply` connects to the Talos API on each node IP (port `50000`) and pushes the machine configuration.
+If it sits at “Still creating…” for multiple minutes, it almost always means Terraform cannot reach the Talos API on the IPs you configured.
+
+Quick checks from the machine running Terraform:
+
+```bash
+for ip in 192.168.50.201 192.168.50.202 192.168.50.203; do
+  echo "== $ip =="
+  ping -c1 -W1 "$ip" || true
+  timeout 2 bash -lc "</dev/tcp/$ip/50000" && echo "port 50000 open" || echo "port 50000 closed"
+done
+```
+
+Common causes:
+- The VMs did not get the IPs you set in `nodes` (Talos ISO boots with DHCP by default). Fix via DHCP reservations *or* add static network config to the Talos patch.
+- VLAN/bridge mismatch (e.g., `vm_vlan_id` not set when you expect tagged VLANs).
+- The Talos VM didn’t boot into the ISO (check the Proxmox console for each VM and confirm it shows a Talos maintenance screen + IP).
