@@ -29,6 +29,7 @@ resource "talos_machine_configuration_apply" "cp" {
   endpoint                    = each.value.ip
 
   config_patches = compact([
+    file("${path.module}/patches/remove-exclude-lb-label.yaml"),
     templatefile("${path.module}/patches/node.yaml", {
       hostname                           = each.key
       install_disk                       = each.value.install_disk

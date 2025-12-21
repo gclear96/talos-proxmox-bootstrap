@@ -46,7 +46,7 @@ talos_iso_file_id  = "local:iso/talos-amd64.iso" # set this if you don't downloa
 
 # Talos install image (required)
 # For Longhorn, build a custom installer image with system extensions (iscsi-tools, util-linux-tools).
-talos_installer_image = "ghcr.io/siderolabs/installer:v1.8.0"
+talos_installer_image = "factory.talos.dev/metal-installer/REPLACE_WITH_YOUR_FACTORY_ID:v1.11.6"
 allow_scheduling_on_control_planes = true
 
 # Argo CD + platform repo

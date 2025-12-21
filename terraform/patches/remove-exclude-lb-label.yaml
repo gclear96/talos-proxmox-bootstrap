@@ -1,0 +1,3 @@
+# Remove Talos default label that blocks external LBs (MetalLB L2)
+- op: remove
+  path: /machine/nodeLabels/node.kubernetes.io~1exclude-from-external-load-balancers

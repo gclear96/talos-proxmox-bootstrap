@@ -11,7 +11,7 @@ This repo is intended to be run locally. It provisions 3 Talos Linux VMs on Prox
 - Terraform (or OpenTofu) 1.5+
 - Proxmox VE API endpoint + token with VM/storage permissions
 - A Talos ISO URL you can download into Proxmox *or* a Talos ISO already present on Proxmox storage
-- A Talos installer image tag for `talos_installer_image` (example: `ghcr.io/siderolabs/installer:v1.8.0`)
+- A Talos installer image tag for `talos_installer_image` (use an Image Factory build if you need Longhorn; example: `factory.talos.dev/metal-installer/…:v1.11.6`)
 - `talosctl` and `kubectl` are helpful for debugging (not required for the Terraform plan itself)
 - Each Proxmox node must have hardware virtualization enabled (Intel VT-x / AMD-V). If one node lacks it, VMs on that node will fail to start with “KVM virtualization configured, but not available”.
 
@@ -75,8 +75,15 @@ in `var.nodes`.
 
 ## Talos install + VIP
 
-- `talos_installer_image` is required (example: `ghcr.io/siderolabs/installer:v1.8.0`).
+- `talos_installer_image` is required (use an Image Factory installer with iSCSI tools if you plan to run Longhorn; example: `factory.talos.dev/metal-installer/…:v1.11.6`).
 - For a stable API endpoint, set `cluster_vip_ip` (and keep `cluster_endpoint` pointing at the same IP).
+
+## MetalLB (L2) note for control-plane nodes
+
+Talos control-plane nodes include the label `node.kubernetes.io/exclude-from-external-load-balancers` by default.
+MetalLB L2 respects that label and will not announce VIPs from those nodes.
+
+This repo removes the label via `terraform/patches/remove-exclude-lb-label.yaml` so L2 announcements work on control-plane-only clusters.
 
 ## Longhorn prerequisites (Talos)
 
