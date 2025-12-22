@@ -1,5 +1,7 @@
 # Talos on Proxmox – bootstrap repo
 
+![system diagram](https://github.com/gclear96/talos-proxmox-bootstrap/blob/7569d75400df082f0066cbdbac4450ffbfea9e4c/assets/talos-proxmox.png)
+
 This repo is intended to be run locally. It provisions 3 Talos Linux VMs on Proxmox, bootstraps a Kubernetes cluster, installs Argo CD, and applies a single **root** Argo CD Application that points at the platform repo.
 
 > Notes:
