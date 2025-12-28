@@ -19,6 +19,14 @@ git remote add forgejo https://FORGEJO_HOST/YOURORG/talos-platform.git
 git push --mirror forgejo
 ```
 
+1b) Mirror/push additional repos into Forgejo (optional, recommended)
+
+If you plan to run day-2 Terraform from in-cluster Forgejo (runner/Actions), mirror those repos too:
+
+- Vault Terraform repo (`vault-terraform-repo`)
+
+You can use `./scripts/bootstrap_forgejo_repos.sh` to create + mirror both the platform repo and `vault-terraform-repo` once Forgejo is reachable.
+
 2) Update the platform repo manifests to reference Forgejo
 
 In the platform repo, run:
@@ -53,4 +61,3 @@ terraform apply
   - `kubectl --kubeconfig ../out/<cluster>.kubeconfig -n argocd get application platform-root -o yaml | grep -n \"repoURL\" -n`
 - Child Applications continue to sync and become Healthy:
   - `kubectl --kubeconfig ../out/<cluster>.kubeconfig -n argocd get applications`
-
