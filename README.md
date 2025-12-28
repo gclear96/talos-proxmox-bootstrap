@@ -19,19 +19,28 @@ This repo is intended to be run locally. It provisions 3 Talos Linux VMs on Prox
 
 ## Quick start
 
+Day 0 (before Garage exists): use local state.
+
 ```bash
 cd terraform
 
 cp terraform.tfvars.example terraform.tfvars
 # edit terraform.tfvars with your environment details
 
-terraform init
+terraform init -backend=false
 terraform apply
 ```
 
 Outputs include:
 - `kubeconfig_path` (written locally)
 - `talosconfig_path` (written locally)
+
+Day 2 (after Garage is deployed): use remote state in Garage (recommended, required for CI).
+
+```bash
+./scripts/tf-init-garage.sh
+terraform -chdir=terraform apply
+```
 
 ## First-bootstrap timing (Argo CD)
 
@@ -128,6 +137,30 @@ If your platform repo is private (common after cutover to in-cluster Forgejo), s
 `platform_repo_password` (prefer `TF_VAR_platform_repo_password` env var) so Argo CD can fetch it.
 
 See `CUTOVER.md` for the end-to-end procedure.
+
+## CI/CD (Forgejo Actions)
+
+This repo includes Forgejo Actions workflows under `.forgejo/workflows/`:
+
+- PRs: `terraform fmt` + `init -backend=false` + `validate`
+- `main`: runs `terraform plan` + **auto-applies only non-destructive plans** (no delete/replace). Destructive plans must be applied via the manual workflow dispatch.
+
+CI prerequisites:
+
+- **Remote state**: migrate your existing local Terraform state to Garage before enabling auto-apply in CI, otherwise Terraform will treat this as a new cluster and can regenerate Talos machine secrets.
+  - The backend block is in `terraform/backend.tf` (Garage bucket `tf-state`, key `bootstrap/terraform.tfstate`).
+  - CI uses `TF_S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` as Forgejo repo secrets.
+- **Terraform variables**: CI needs your cluster config. Choose one:
+  1) Commit a non-secret tfvars file in-repo at `terraform/cluster.auto.tfvars` or `terraform/cluster.auto.tfvars.json` (recommended), or
+  2) Set a Forgejo repo secret `TF_BOOTSTRAP_TFVARS_JSON` containing a JSON tfvars document (all variables).
+- **Proxmox auth**: set a Forgejo repo secret `PROXMOX_VE_API_TOKEN` (preferred) or include `proxmox_api_token` in `TF_BOOTSTRAP_TFVARS_JSON`.
+- **Argo repo auth (optional)**: after cutting over the platform repo to a private Forgejo repo, set:
+  - `TF_VAR_platform_repo_username`
+  - `TF_VAR_platform_repo_password`
+- **Runner network access**: the in-cluster runner must be able to reach:
+  - Proxmox API (`proxmox_endpoint`)
+  - Talos node IPs (Talos API `:50000`)
+  - Kubernetes API endpoint (`cluster_endpoint`)
 
 ## Note: Argo CD root app installation
 

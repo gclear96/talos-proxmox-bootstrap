@@ -23,9 +23,12 @@ git push --mirror forgejo
 
 If you plan to run day-2 Terraform from in-cluster Forgejo (runner/Actions), mirror those repos too:
 
+- Bootstrap repo (`talos-proxmox-bootstrap-repo`)
 - Vault Terraform repo (`vault-terraform-repo`)
+- Authentik Terraform repo (`authentik-terraform-repo`)
 
 You can use `./scripts/bootstrap_forgejo_repos.sh` to create + mirror both the platform repo and `vault-terraform-repo` once Forgejo is reachable.
+That script also supports `authentik-terraform-repo`.
 
 2) Update the platform repo manifests to reference Forgejo
 

@@ -35,8 +35,10 @@ Flags:
   --overwrite-existing    If the Forgejo repo already exists, allow overwriting refs via --mirror.
 
 Repos mirrored by default (workspace layout):
+  - talos-proxmox-bootstrap-repo -> <owner>/talos-proxmox-bootstrap.git
   - talos-proxmox-platform-repo  -> <owner>/talos-proxmox-platform.git
   - vault-terraform-repo         -> <owner>/vault-terraform-repo.git
+  - authentik-terraform-repo     -> <owner>/authentik-terraform-repo.git
 
 EOF
 }
@@ -178,8 +180,10 @@ mirror_one() {
     push --mirror "${git_url}"
 }
 
+mirror_one "${workspace_root}/talos-proxmox-bootstrap-repo" "talos-proxmox-bootstrap"
 mirror_one "${workspace_root}/talos-proxmox-platform-repo" "talos-proxmox-platform"
 mirror_one "${workspace_root}/vault-terraform-repo" "vault-terraform-repo"
+mirror_one "${workspace_root}/authentik-terraform-repo" "authentik-terraform-repo"
 
 cat <<EOF
 
@@ -190,9 +194,10 @@ Next (cutover):
   - Point the bootstrap root app at Forgejo:
       Follow: talos-proxmox-bootstrap-repo/CUTOVER.md (platform_repo_url -> Forgejo)
 
-Next (Vault repo CI):
-  - Mirror includes .forgejo workflows already; after runner is enabled, set Forgejo repo secrets per vault-terraform-repo/README.md.
-  - TODO: add an in-cluster S3 backend (Garage) for Terraform state; until then, CI imports from live Vault each run.
+Next (Terraform repos CI):
+  - Mirror includes .forgejo workflows already; after runner is enabled, set Forgejo repo secrets:
+      - talos-proxmox-bootstrap-repo/README.md
+      - vault-terraform-repo/README.md
+      - authentik-terraform-repo/README.md
 
 EOF
-

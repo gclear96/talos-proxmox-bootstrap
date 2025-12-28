@@ -1,0 +1,110 @@
+name: terraform-apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      allow_destructive:
+        description: "Allow delete/replace actions in Terraform plan"
+        required: true
+        default: "false"
+
+concurrency:
+  group: bootstrap-terraform
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: "1"
+      TF_S3_ENDPOINT: ${{ secrets.TF_S3_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-east-1
+      PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
+      TF_VAR_platform_repo_username: ${{ secrets.TF_VAR_platform_repo_username }}
+      TF_VAR_platform_repo_password: ${{ secrets.TF_VAR_platform_repo_password }}
+      TF_BOOTSTRAP_TFVARS_JSON: ${{ secrets.TF_BOOTSTRAP_TFVARS_JSON }}
+      ALLOW_DESTRUCTIVE: ${{ inputs.allow_destructive }}
+    steps:
+      - name: Checkout
+        uses: https://code.forgejo.org/actions/checkout@v4
+
+      - name: Install terraform + kubectl + jq (if missing)
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y unzip jq ca-certificates
+          if ! command -v terraform >/dev/null 2>&1; then
+            curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/1.14.3/terraform_1.14.3_linux_amd64.zip
+            sudo unzip -o /tmp/terraform.zip -d /usr/local/bin
+          fi
+          if ! command -v kubectl >/dev/null 2>&1; then
+            curl -fsSL -o /tmp/kubectl https://dl.k8s.io/release/v1.34.0/bin/linux/amd64/kubectl
+            sudo install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+          fi
+          terraform version
+          kubectl version --client=true --output=yaml | head -n 20
+
+      - name: Guard: required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${TF_S3_ENDPOINT:?Set Forgejo secret TF_S3_ENDPOINT (e.g. http://platform-garage.garage.svc:3900)}"
+          : "${AWS_ACCESS_KEY_ID:?Set Forgejo secret AWS_ACCESS_KEY_ID (Garage S3 key id)}"
+          : "${AWS_SECRET_ACCESS_KEY:?Set Forgejo secret AWS_SECRET_ACCESS_KEY (Garage S3 secret key)}"
+          : "${PROXMOX_VE_API_TOKEN:?Set Forgejo secret PROXMOX_VE_API_TOKEN (Proxmox API token for bpg/proxmox)}"
+
+      - name: Write CI tfvars (optional)
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f terraform/cluster.auto.tfvars.json || -f terraform/cluster.auto.tfvars ]]; then
+            echo "Found terraform/cluster.auto.tfvars(.json); using repo-provided config."
+            exit 0
+          fi
+          if [[ -z "${TF_BOOTSTRAP_TFVARS_JSON:-}" ]]; then
+            echo "Missing config: add terraform/cluster.auto.tfvars(.json) to repo OR set TF_BOOTSTRAP_TFVARS_JSON secret." >&2
+            exit 2
+          fi
+          umask 077
+          mkdir -p terraform/out
+          echo "${TF_BOOTSTRAP_TFVARS_JSON}" > terraform/out/ci.auto.tfvars.json
+
+      - name: Terraform init (Garage backend)
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir=terraform init -input=false \
+            -backend-config="endpoint=${TF_S3_ENDPOINT}" \
+            -backend-config="force_path_style=true" \
+            -backend-config="skip_credentials_validation=true" \
+            -backend-config="skip_metadata_api_check=true" \
+            -backend-config="skip_region_validation=true"
+
+      - name: Terraform plan (save)
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir=terraform plan -input=false -no-color -out=plan.tfplan
+
+      - name: Guard: destructive plan requires allow_destructive=true
+        if: ${{ env.ALLOW_DESTRUCTIVE != 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir=terraform show -json plan.tfplan \
+            | jq -e '
+                [.resource_changes[]?.change.actions] as $a
+                | any($a[]; index("delete") != null)
+                  or any($a[]; (. == ["create","delete"]) or (. == ["delete","create"]))
+              ' >/dev/null \
+            && { echo "Plan includes delete/replace; re-run workflow with allow_destructive=true." >&2; exit 3; } \
+            || echo "Plan is non-destructive; proceeding."
+
+      - name: Terraform apply (from saved plan)
+        shell: bash
+        run: |
+          set -euo pipefail
+          terraform -chdir=terraform apply -input=false -auto-approve -no-color plan.tfplan
