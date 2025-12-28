@@ -38,7 +38,7 @@ Outputs include:
 Day 2 (after Garage is deployed): use remote state in Garage (recommended, required for CI).
 
 ```bash
-./scripts/tf-init-garage.sh
+./scripts/tf-migrate-state-garage.sh
 terraform -chdir=terraform apply
 ```
 
