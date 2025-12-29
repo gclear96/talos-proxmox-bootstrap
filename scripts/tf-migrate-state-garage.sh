@@ -34,8 +34,9 @@ case "${MODE}" in
 esac
 
 terraform -chdir=terraform init "${init_args[@]}" \
-  -backend-config="endpoint=${TF_S3_ENDPOINT}" \
+  -backend-config="endpoints.s3=${TF_S3_ENDPOINT}" \
   -backend-config="force_path_style=true" \
   -backend-config="skip_credentials_validation=true" \
+  -backend-config="skip_requesting_account_id=true" \
   -backend-config="skip_metadata_api_check=true" \
   -backend-config="skip_region_validation=true"
