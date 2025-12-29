@@ -33,10 +33,24 @@ case "${MODE}" in
     ;;
 esac
 
-terraform -chdir=terraform init "${init_args[@]}" \
-  -backend-config="endpoints.s3=${TF_S3_ENDPOINT}" \
-  -backend-config="force_path_style=true" \
-  -backend-config="skip_credentials_validation=true" \
-  -backend-config="skip_requesting_account_id=true" \
-  -backend-config="skip_metadata_api_check=true" \
+backend_args_common=(
+  -backend-config="force_path_style=true"
+  -backend-config="skip_credentials_validation=true"
+  -backend-config="skip_requesting_account_id=true"
+  -backend-config="skip_metadata_api_check=true"
   -backend-config="skip_region_validation=true"
+)
+
+try_init() {
+  terraform -chdir=terraform init "${init_args[@]}" "$@"
+}
+
+if ! try_init -backend-config="endpoints.s3=${TF_S3_ENDPOINT}" "${backend_args_common[@]}" 2>out/tf-migrate-garage.err; then
+  if grep -Eq "Invalid backend configuration argument|not expected" out/tf-migrate-garage.err; then
+    echo "Terraform does not accept backend arg 'endpoints.s3'; retrying with 'endpoint='." >&2
+    try_init -backend-config="endpoint=${TF_S3_ENDPOINT}" "${backend_args_common[@]}"
+  else
+    cat out/tf-migrate-garage.err >&2
+    exit 1
+  fi
+fi
