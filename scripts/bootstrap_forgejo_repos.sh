@@ -111,6 +111,53 @@ require_cmd jq
 require_cmd git
 require_cmd base64
 
+api_status() {
+  local url="$1"
+  curl -sS -o /dev/null -w "%{http_code}" -H "${AUTH_HEADER}" "${url}" || true
+}
+
+api_get() {
+  local url="$1"
+  local tmp
+  tmp="$(mktemp)"
+  local code
+  code="$(curl -sS -o "${tmp}" -w "%{http_code}" -H "${AUTH_HEADER}" "${url}" || true)"
+  if [[ "${code}" =~ ^2 ]]; then
+    cat "${tmp}"
+    rm -f "${tmp}"
+    return 0
+  fi
+  echo "Forgejo API GET failed: ${url} (HTTP ${code})" >&2
+  if [[ -s "${tmp}" ]]; then
+    cat "${tmp}" >&2
+    echo >&2
+  fi
+  rm -f "${tmp}"
+  return 1
+}
+
+api_post_json() {
+  local url="$1"
+  local body_json="$2"
+  local tmp
+  tmp="$(mktemp)"
+  local code
+  code="$(curl -sS -o "${tmp}" -w "%{http_code}" -X POST -H "${AUTH_HEADER}" -H "Content-Type: application/json" \
+    -d "${body_json}" "${url}" || true)"
+  if [[ "${code}" =~ ^2 ]]; then
+    cat "${tmp}"
+    rm -f "${tmp}"
+    return 0
+  fi
+  echo "Forgejo API POST failed: ${url} (HTTP ${code})" >&2
+  if [[ -s "${tmp}" ]]; then
+    cat "${tmp}" >&2
+    echo >&2
+  fi
+  rm -f "${tmp}"
+  return 1
+}
+
 echo "Waiting for Forgejo API at ${API_BASE}/version ..."
 for i in $(seq 1 120); do
   if curl -fsS "${API_BASE}/version" >/dev/null 2>&1; then
@@ -127,6 +174,43 @@ echo "Forgejo version:"
 curl -fsS "${API_BASE}/version" | jq .
 
 AUTH_HEADER="Authorization: token ${FORGEJO_TOKEN}"
+
+echo
+echo "Authenticating token..."
+token_login="$(api_get "${API_BASE}/user" | jq -r '.login // empty')"
+if [[ -z "${token_login}" ]]; then
+  echo "Failed to resolve token user login from ${API_BASE}/user" >&2
+  exit 1
+fi
+echo "Token user: ${token_login}"
+
+if [[ "${FORGEJO_OWNER_TYPE}" == "user" && "${FORGEJO_OWNER}" != "${token_login}" ]]; then
+  cat >&2 <<EOF
+
+NOTE:
+  --owner-type user uses POST ${API_BASE}/user/repos, which creates repos under the token user (${token_login}).
+  Your --owner is '${FORGEJO_OWNER}', which does not match the token user.
+
+Fix:
+  - Re-run with: --owner ${token_login} --owner-type user
+  - Or, if you intended an org, create that org and use: --owner-type org
+
+EOF
+  exit 2
+fi
+
+if [[ "${FORGEJO_OWNER_TYPE}" == "org" ]]; then
+  echo "Checking org access for: ${FORGEJO_OWNER}"
+  org_code="$(api_status "${API_BASE}/orgs/${FORGEJO_OWNER}")"
+  if [[ "${org_code}" != "200" ]]; then
+    echo "Cannot access org ${FORGEJO_OWNER} via API (HTTP ${org_code})." >&2
+    echo "Known orgs visible to this token:" >&2
+    api_get "${API_BASE}/user/orgs" | jq -r '.[].username' >&2 || true
+    echo >&2
+    echo "Fix: ensure the org exists and the token user (${token_login}) is an org owner, and the PAT has org write permissions." >&2
+    exit 2
+  fi
+fi
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 workspace_root="$(cd -- "${script_dir}/../.." && pwd)"
@@ -157,13 +241,11 @@ mirror_one() {
   else
     echo "Creating Forgejo repo: ${FORGEJO_OWNER}/${forgejo_repo_name}"
     if [[ "${FORGEJO_OWNER_TYPE}" == "org" ]]; then
-      curl -fsS -X POST -H "${AUTH_HEADER}" -H "Content-Type: application/json" \
-        -d "$(jq -n --arg name "${forgejo_repo_name}" '{name:$name, private:true}')" \
-        "${API_BASE}/orgs/${FORGEJO_OWNER}/repos" >/dev/null
+      api_post_json "${API_BASE}/orgs/${FORGEJO_OWNER}/repos" \
+        "$(jq -n --arg name "${forgejo_repo_name}" '{name:$name, private:true}')" >/dev/null
     else
-      curl -fsS -X POST -H "${AUTH_HEADER}" -H "Content-Type: application/json" \
-        -d "$(jq -n --arg name "${forgejo_repo_name}" '{name:$name, private:true}')" \
-        "${API_BASE}/user/repos" >/dev/null
+      api_post_json "${API_BASE}/user/repos" \
+        "$(jq -n --arg name "${forgejo_repo_name}" '{name:$name, private:true}')" >/dev/null
     fi
   fi
 
