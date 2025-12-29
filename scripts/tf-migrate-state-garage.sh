@@ -17,7 +17,6 @@ source "${ENV_FILE}"
 
 export TF_S3_ENDPOINT AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
 
-terraform -chdir=terraform init -input=false -migrate-state -reconfigure \
 MODE="${MODE:-migrate}" # migrate|reconfigure
 
 init_args=("-input=false")
