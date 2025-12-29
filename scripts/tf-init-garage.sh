@@ -15,10 +15,11 @@ source "${ENV_FILE}"
 : "${AWS_ACCESS_KEY_ID:?Missing AWS_ACCESS_KEY_ID in ${ENV_FILE}}"
 : "${AWS_SECRET_ACCESS_KEY:?Missing AWS_SECRET_ACCESS_KEY in ${ENV_FILE}}"
 
+export TF_S3_ENDPOINT AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
+
 terraform -chdir=terraform init -input=false \
   -backend-config="endpoint=${TF_S3_ENDPOINT}" \
   -backend-config="force_path_style=true" \
   -backend-config="skip_credentials_validation=true" \
   -backend-config="skip_metadata_api_check=true" \
   -backend-config="skip_region_validation=true"
-
