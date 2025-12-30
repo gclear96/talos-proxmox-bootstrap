@@ -15,6 +15,7 @@ source "${ENV_FILE}"
 : "${AWS_ACCESS_KEY_ID:?Missing AWS_ACCESS_KEY_ID in ${ENV_FILE}}"
 : "${AWS_SECRET_ACCESS_KEY:?Missing AWS_SECRET_ACCESS_KEY in ${ENV_FILE}}"
 
+AWS_REGION="${AWS_REGION:-garage}"
 export TF_S3_ENDPOINT AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION
 
 MODE="${MODE:-migrate}" # migrate|reconfigure
@@ -35,6 +36,7 @@ esac
 
 terraform -chdir=terraform init "${init_args[@]}" \
   -backend-config="endpoint=${TF_S3_ENDPOINT}" \
+  -backend-config="region=${AWS_REGION}" \
   -backend-config="force_path_style=true" \
   -backend-config="skip_credentials_validation=true" \
   -backend-config="skip_requesting_account_id=true" \

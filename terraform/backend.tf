@@ -11,6 +11,7 @@ terraform {
   backend "s3" {
     bucket = "tf-state"
     key    = "bootstrap/terraform.tfstate"
-    region = "us-east-1"
+    # Garage advertises region "garage" and expects SigV4 requests to use it.
+    region = "garage"
   }
 }
