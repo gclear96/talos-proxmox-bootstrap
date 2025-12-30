@@ -25,6 +25,8 @@ init_args=("-input=false")
 case "${MODE}" in
   migrate)
     init_args+=("-migrate-state")
+    # Avoid interactive approval prompt for state migration.
+    init_args+=("-force-copy")
     ;;
   reconfigure)
     init_args+=("-reconfigure")
