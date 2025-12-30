@@ -39,7 +39,8 @@ Day 2 (after Garage is deployed): use remote state in Garage (recommended, requi
 
 ```bash
 ./scripts/tf-migrate-state-garage.sh
-terraform -chdir=terraform apply
+./scripts/tf-plan-garage.sh -out=planfile
+./scripts/tf-apply-garage.sh planfile
 ```
 
 ## First-bootstrap timing (Argo CD)
