@@ -5,7 +5,9 @@ resource "terraform_data" "wait_for_kube" {
   ]
 
   triggers_replace = {
-    kubeconfig_sha = fileexists(local.kubeconfig_path) ? filesha256(local.kubeconfig_path) : "missing"
+    # Avoid reading from the local filesystem (CI runners are ephemeral and won't have ../out/*),
+    # but still re-run the readiness wait if the kubeconfig content changes.
+    kubeconfig_sha = sha256(talos_cluster_kubeconfig.this.kubeconfig_raw)
   }
 
   provisioner "local-exec" {

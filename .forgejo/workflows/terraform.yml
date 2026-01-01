@@ -163,7 +163,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          terraform -chdir=terraform plan -input=false -no-color -out=plan.tfplan
+          # Avoid printing full plan to logs (may contain sensitive values from prior state).
+          terraform -chdir=terraform plan -input=false -no-color -out=plan.tfplan >/dev/null
 
       - name: "Guard: block destructive changes by default"
         shell: bash
