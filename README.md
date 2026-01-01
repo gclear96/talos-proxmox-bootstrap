@@ -6,7 +6,7 @@ This repo is intended to be run locally. It provisions 3 Talos Linux VMs on Prox
 
 > Notes:
 > - This is a **scaffold**: you’ll likely tweak Proxmox VM settings (disks, BIOS/UEFI, storage IDs, ISO attachment).
-> - Credentials are expected via env vars (recommended) or `terraform.tfvars`.
+> - Credentials are expected via env vars (recommended). Do not commit token secrets into `terraform.tfvars`.
 
 ## Prereqs
 
@@ -152,12 +152,13 @@ CI prerequisites:
   - The backend block is in `terraform/backend.tf` (Garage bucket `tf-state`, key `bootstrap/terraform.tfstate`).
   - CI uses `TF_S3_ENDPOINT`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` as Forgejo repo secrets.
 - **Terraform variables**: CI needs your cluster config. Choose one:
-  1) Commit a non-secret tfvars file in-repo at `terraform/cluster.auto.tfvars` or `terraform/cluster.auto.tfvars.json` (recommended), or
+  1) Commit a non-secret tfvars file in-repo at `terraform/cluster.auto.tfvars` (recommended), or
   2) Set a Forgejo repo secret `TF_BOOTSTRAP_TFVARS_JSON` containing a JSON tfvars document (all variables).
 - **Proxmox auth**: set a Forgejo repo secret `PROXMOX_VE_API_TOKEN` (preferred) or include `proxmox_api_token` in `TF_BOOTSTRAP_TFVARS_JSON`.
 - **Argo repo auth (optional)**: after cutting over the platform repo to a private Forgejo repo, set:
   - `TF_VAR_platform_repo_username`
   - `TF_VAR_platform_repo_password`
+  - Note: set both or neither; CI will treat missing secrets as unset (null), but empty strings can break Argo repo auth.
 - **Runner network access**: the in-cluster runner must be able to reach:
   - Proxmox API (`proxmox_endpoint`)
   - Talos node IPs (Talos API `:50000`)

@@ -9,6 +9,9 @@
 **/*.tfplan
 **/planfile
 
+# Allow committing a non-secret cluster config for CI.
+!terraform/cluster.auto.tfvars
+
 # Tooling caches
 .helm/
 

@@ -24,10 +24,18 @@ jobs:
             terraform version
             exit 0
           fi
-          sudo apt-get update
-          sudo apt-get install -y unzip
+          if ! command -v apt-get >/dev/null 2>&1; then
+            echo "apt-get not found; cannot auto-install terraform on this runner image." >&2
+            exit 2
+          fi
+          if [[ "$(id -u)" != "0" ]]; then
+            echo "Runner is not root and sudo is unavailable; cannot apt-get install terraform prerequisites." >&2
+            exit 2
+          fi
+          apt-get update
+          apt-get install -y ca-certificates curl unzip
           curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/1.14.3/terraform_1.14.3_linux_amd64.zip
-          sudo unzip -o /tmp/terraform.zip -d /usr/local/bin
+          unzip -o /tmp/terraform.zip -d /usr/local/bin
           terraform version
 
       - name: Terraform fmt
@@ -59,8 +67,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: garage
       PROXMOX_VE_API_TOKEN: ${{ secrets.PROXMOX_VE_API_TOKEN }}
-      TF_VAR_platform_repo_username: ${{ secrets.TF_VAR_platform_repo_username }}
-      TF_VAR_platform_repo_password: ${{ secrets.TF_VAR_platform_repo_password }}
+      TF_VAR_proxmox_api_token: ${{ secrets.PROXMOX_VE_API_TOKEN }}
       # Option A (recommended): commit a non-secret tfvars file in git (see README).
       # Option B: provide all variables as a single JSON tfvars blob.
       TF_BOOTSTRAP_TFVARS_JSON: ${{ secrets.TF_BOOTSTRAP_TFVARS_JSON }}
@@ -72,34 +79,60 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y unzip jq ca-certificates
+          if ! command -v apt-get >/dev/null 2>&1; then
+            echo "apt-get not found; cannot install dependencies on this runner image." >&2
+            exit 2
+          fi
+          if [[ "$(id -u)" != "0" ]]; then
+            echo "Runner is not root and sudo is unavailable; cannot apt-get install dependencies." >&2
+            exit 2
+          fi
+          apt-get update
+          apt-get install -y ca-certificates curl jq unzip
           if ! command -v terraform >/dev/null 2>&1; then
             curl -fsSL -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/1.14.3/terraform_1.14.3_linux_amd64.zip
-            sudo unzip -o /tmp/terraform.zip -d /usr/local/bin
+            unzip -o /tmp/terraform.zip -d /usr/local/bin
           fi
           if ! command -v kubectl >/dev/null 2>&1; then
             curl -fsSL -o /tmp/kubectl https://dl.k8s.io/release/v1.34.0/bin/linux/amd64/kubectl
-            sudo install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+            install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
           fi
           terraform version
           kubectl version --client=true --output=yaml | head -n 20
 
-      - name: Guard: required secrets
+      - name: "Guard: required secrets"
         shell: bash
         run: |
           set -euo pipefail
           : "${TF_S3_ENDPOINT:?Set Forgejo secret TF_S3_ENDPOINT (e.g. http://platform-garage.garage.svc:3900)}"
           : "${AWS_ACCESS_KEY_ID:?Set Forgejo secret AWS_ACCESS_KEY_ID (Garage S3 key id)}"
           : "${AWS_SECRET_ACCESS_KEY:?Set Forgejo secret AWS_SECRET_ACCESS_KEY (Garage S3 secret key)}"
-          : "${PROXMOX_VE_API_TOKEN:?Set Forgejo secret PROXMOX_VE_API_TOKEN (Proxmox API token for bpg/proxmox)}"
+          : "${TF_VAR_proxmox_api_token:?Set Forgejo secret PROXMOX_VE_API_TOKEN (Proxmox API token secret)}"
+
+      - name: Export optional platform repo auth TF vars
+        shell: bash
+        env:
+          PLATFORM_REPO_USERNAME: ${{ secrets.TF_VAR_platform_repo_username }}
+          PLATFORM_REPO_PASSWORD: ${{ secrets.TF_VAR_platform_repo_password }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PLATFORM_REPO_USERNAME:-}" && -z "${PLATFORM_REPO_PASSWORD:-}" ]]; then
+            echo "No platform repo auth secrets set; leaving platform_repo_username/password unset (null)."
+            exit 0
+          fi
+          : "${PLATFORM_REPO_USERNAME:?Set TF_VAR_platform_repo_username (or unset both username+password)}"
+          : "${PLATFORM_REPO_PASSWORD:?Set TF_VAR_platform_repo_password (or unset both username+password)}"
+          {
+            echo "TF_VAR_platform_repo_username=${PLATFORM_REPO_USERNAME}"
+            echo "TF_VAR_platform_repo_password=${PLATFORM_REPO_PASSWORD}"
+          } >> "${GITHUB_ENV}"
 
       - name: Write CI tfvars (optional)
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -f terraform/cluster.auto.tfvars.json || -f terraform/cluster.auto.tfvars ]]; then
-            echo "Found terraform/cluster.auto.tfvars(.json); using repo-provided config."
+          if [[ -f terraform/cluster.auto.tfvars.json || -f terraform/cluster.auto.tfvars || -f terraform/terraform.tfvars || -f terraform/terraform.tfvars.json ]]; then
+            echo "Found repo-provided tfvars; using in-repo config."
             exit 0
           fi
           if [[ -z "${TF_BOOTSTRAP_TFVARS_JSON:-}" ]]; then
@@ -107,8 +140,7 @@ jobs:
             exit 2
           fi
           umask 077
-          mkdir -p terraform/out
-          echo "${TF_BOOTSTRAP_TFVARS_JSON}" > terraform/out/ci.auto.tfvars.json
+          echo "${TF_BOOTSTRAP_TFVARS_JSON}" > terraform/ci.auto.tfvars.json
 
       - name: Terraform init (Garage backend)
         shell: bash
@@ -129,7 +161,7 @@ jobs:
           set -euo pipefail
           terraform -chdir=terraform plan -input=false -no-color -out=plan.tfplan
 
-      - name: Guard: block destructive changes by default
+      - name: "Guard: block destructive changes by default"
         shell: bash
         run: |
           set -euo pipefail

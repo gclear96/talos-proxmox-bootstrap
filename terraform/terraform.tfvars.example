@@ -1,7 +1,10 @@
 # Proxmox
 proxmox_endpoint   = "https://10.0.0.2:8006/"
 proxmox_insecure   = true
-proxmox_api_token  = "terraform@pve!token=REDACTED" # or set PROXMOX_VE_API_TOKEN / use env vars
+# IMPORTANT: do not commit Proxmox API token secrets.
+# Provide `proxmox_api_token` via env var instead:
+#   export TF_VAR_proxmox_api_token='user@pam!tokenid=secret'
+proxmox_api_token  = null
 
 # Cluster basics
 cluster_name       = "homelab"
