@@ -108,6 +108,10 @@ jobs:
           : "${AWS_ACCESS_KEY_ID:?Set Forgejo secret AWS_ACCESS_KEY_ID (Garage S3 key id)}"
           : "${AWS_SECRET_ACCESS_KEY:?Set Forgejo secret AWS_SECRET_ACCESS_KEY (Garage S3 secret key)}"
           : "${TF_VAR_proxmox_api_token:?Set Forgejo secret PROXMOX_VE_API_TOKEN (Proxmox API token secret)}"
+          if [[ "${TF_VAR_proxmox_api_token}" != *"@"*"!"*"="* ]]; then
+            echo "PROXMOX_VE_API_TOKEN looks malformed. Expected format: user@realm!tokenid=secret (example: root@pam!terraform=xxxxxxxx)." >&2
+            exit 2
+          fi
 
       - name: Export optional platform repo auth TF vars
         shell: bash
