@@ -24,10 +24,15 @@ Day 0 (before Garage exists): use local state.
 ```bash
 cd terraform
 
+# Recommended:
+# - Keep non-secret cluster config in `cluster.auto.tfvars` (committable).
+# - Keep secrets in env vars (do not commit tokens into tfvars).
+#
+# For a one-off local override file, you can copy the example:
 cp terraform.tfvars.example terraform.tfvars
-# edit terraform.tfvars with your environment details
 
 terraform init -backend=false
+export TF_VAR_proxmox_api_token='user@pam!tokenid=secret'
 terraform apply
 ```
 
@@ -54,17 +59,17 @@ To avoid Helm/Argo CD racing the API, Terraform waits for `/readyz` before insta
 ## Smoke tests
 
 ```bash
-KUBECONFIG=../out/homelab.kubeconfig kubectl get nodes -o wide
-KUBECONFIG=../out/homelab.kubeconfig kubectl get pods -A
-KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd get pods
-KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd get applications,applicationsets,appprojects
+KUBECONFIG=../out/talos-admin-1.kubeconfig kubectl get nodes -o wide
+KUBECONFIG=../out/talos-admin-1.kubeconfig kubectl get pods -A
+KUBECONFIG=../out/talos-admin-1.kubeconfig kubectl -n argocd get pods
+KUBECONFIG=../out/talos-admin-1.kubeconfig kubectl -n argocd get applications,applicationsets,appprojects
 ```
 
 To access Argo CD UI quickly:
 
 ```bash
-KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd port-forward svc/argo-cd-argocd-server 8080:443
-KUBECONFIG=../out/homelab.kubeconfig kubectl -n argocd get secret argo-cd-argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
+KUBECONFIG=../out/talos-admin-1.kubeconfig kubectl -n argocd port-forward svc/argo-cd-argocd-server 8080:443
+KUBECONFIG=../out/talos-admin-1.kubeconfig kubectl -n argocd get secret argo-cd-argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d && echo
 ```
 
 ## Proxmox VM defaults (Talos-friendly)
