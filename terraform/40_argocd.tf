@@ -33,6 +33,17 @@ resource "helm_release" "argocd" {
       cm = {
         # Allow Argo CD to pull Helm charts from OCI registries (needed for Forgejo chart sources).
         "helm.oci.enabled" = "true"
+        "url"              = "https://argocd.k8s.magomago.moe"
+        "oidc.config"      = <<-EOT
+name: Authentik
+issuer: https://authentik.k8s.magomago.moe/application/o/argocd/
+clientID: argocd
+clientSecret: $oidc.authentik.clientSecret
+requestedScopes:
+  - openid
+  - profile
+  - email
+EOT
       }
     }
   })]
