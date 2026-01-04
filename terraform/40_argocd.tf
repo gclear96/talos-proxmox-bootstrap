@@ -43,6 +43,16 @@ requestedScopes:
   - openid
   - profile
   - email
+  - groups
+EOT
+      }
+      rbac = {
+        "policy.default" = "role:readonly"
+        "scopes"         = "[groups, email]"
+        "policy.csv"     = <<-EOT
+g, platform-admins, role:admin
+g, argocd-admins, role:admin
+g, akadmin, role:admin
 EOT
       }
     }
