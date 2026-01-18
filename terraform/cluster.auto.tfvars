@@ -47,7 +47,7 @@ talos_installer_image              = "factory.talos.dev/metal-installer/613e1592
 allow_scheduling_on_control_planes = true
 
 # Argo CD + platform repo
-platform_repo_url      = "https://forgejo.k8s.magomago.moe/forgejo-admin/talos-proxmox-platform.git"
+platform_repo_url      = "https://forgejo.k8s.magomago.moe/akadmin/talos-proxmox-platform.git"
 platform_repo_revision = "main"
 platform_repo_path     = "clusters/homelab/bootstrap"
 argocd_chart_version   = "9.1.9"
